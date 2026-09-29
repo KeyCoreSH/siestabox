@@ -87,6 +87,14 @@ services:
     depends_on:
       mqtt:
         condition: service_started
+    # O healthcheck da imagem pertence à API; o simulador só precisa
+    # provar que o processo de emulação continua vivo.
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "device-simulator"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     networks: [siesta]
 
