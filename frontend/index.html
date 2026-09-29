@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Siesta Box Platform — Backend, Frontend e Firmware | KeyCore Tech Hub</title>
+<meta name="description" content="Plataforma IoT para hotelaria itinerante: controle de acesso remoto, telemetria MQTT e confirmação de porta em tempo real. Backend Fastify, frontend PWA e firmware MicroPython para ESP32.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">KC</span>
+      <span class="brand-text">
+        <strong>Siesta Box Platform</strong>
+        <span>KeyCore Tech Hub</span>
+      </span>
+    </a>
+    <div class="header-meta">
+      <span class="pill hide-sm"><span class="dot" id="apiDot"></span><span id="apiStatus">API …</span></span>
+      <span class="pill"><span class="dot" id="wsDot"></span><span id="wsStatus">Tempo real …</span></span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ── HERO ─────────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="eyebrow">Desafio Coreto · Siesta Box — Fora da Caixa · Recife</div>
+    <h1>Hotelaria itinerante com acesso remoto confirmado em tempo real.</h1>
+    <p class="lead">
+      Plataforma completa — backend, frontend e firmware — para operar módulos de descanso itinerantes:
+      reserva, pagamento Pix, código de acesso, comando de tranca por MQTT e telemetria de bateria,
+      temperatura e estado da porta. Cada comando enviado ao módulo recebe confirmação do firmware em
+      menos de um segundo, visível no navegador sem recarregar a página.
+    </p>
+
+    <div class="kpis">
+      <div class="kpi"><div class="num" id="kpiUnits">—</div><div class="lbl">Unidades monitoradas</div></div>
+      <div class="kpi"><div class="num" id="kpiOnline">—</div><div class="lbl">Módulos online</div></div>
+      <div class="kpi"><div class="num" id="kpiLatency">—</div><div class="lbl">Latência média do ACK</div></div>
+      <div class="kpi"><div class="num" id="kpiRevenue">—</div><div class="lbl">Receita das reservas</div></div>
+    </div>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="overview">Visão geral</button>
+    <button class="tab-btn" data-tab="live">Painel ao vivo</button>
+    <button class="tab-btn" data-tab="booking">Reserva &amp; acesso</button>
+    <button class="tab-btn" data-tab="firmware">Firmware (copiar)</button>
+    <button class="tab-btn" data-tab="arch">Arquitetura &amp; API</button>
+    <button class="tab-btn" data-tab="run">Como rodar</button>
+  </nav>
+
+  <!-- ── 1. VISÃO GERAL ───────────────────────────────────────────────── -->
+  <section id="tab-overview" class="tab-content active">
+    <div class="stack">
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>O problema operacional</h3>
+          <p class="sub">Hotelaria itinerante significa ciclos de transporte, montagem, operação e desmontagem. Cada ciclo vira gargalo.</p>
+          <ul class="clean">
+            <li><strong>Entrega da chave</strong> — sem recepção física, alguém precisa ir até o módulo entregar acesso.</li>
+            <li><strong>Check-out fantasma</strong> — o módulo fica marcado como ocupado depois que o hóspede saiu.</li>
+            <li><strong>Manutenção reativa</strong> — bateria, temperatura e climatização são descobertas só na reclamação.</li>
+            <li><strong>Precificação manual</strong> — cobrança por hora depende de conferência humana.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>O que a plataforma responde</h3>
+          <p class="sub">Quatro coisas entregues de ponta a ponta, mensuráveis.</p>
+          <ul class="clean">
+            <li><strong>Liberação remota instantânea</strong> — comando <code>unlock</code> via MQTT com ACK do firmware em &lt; 1 s.</li>
+            <li><strong>Estado da porta em tempo real</strong> — o firmware notifica <em>aberta</em>, <em>fechada</em>, <em>destravada</em> e <em>travada</em>; o navegador recebe por WebSocket.</li>
+            <li><strong>Precificação por Pix</strong> — reserva gera valor, TXID e PIN/QR Code de acesso com validade.</li>
+            <li><strong>Telemetria contínua</strong> — bateria, temperatura, umidade, RSSI e uptime gravados para manutenção preditiva.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Módulos do repositório</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Pasta</th><th>Tecnologia</th><th>Responsabilidade</th></tr></thead>
+            <tbody>
+              <tr><td><code>backend/</code></td><td>Node.js · TypeScript · Fastify · PostgreSQL/PostGIS · MQTT · WebSocket</td><td>API REST, ponte MQTT, persistência geoespacial, fan-out em tempo real</td></tr>
+              <tr><td><code>frontend/</code></td><td>HTML/CSS/JS estático em nginx</td><td>Painel ao vivo, reserva, exibição do firmware para copiar/baixar</td></tr>
+              <tr><td><code>firmware/</code></td><td>MicroPython (ESP32)</td><td>Telemetria, eventos de porta, acionamento da tranca e ACK</td></tr>
+              <tr><td><code>infra/</code></td><td>Mosquitto · Docker Compose</td><td>Broker MQTT e orquestração da stack</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Features entregues</h3>
+        <div class="grid-3">
+          <div>
+            <p class="sub" style="margin-bottom:.4rem"><strong>Acesso e tranca</strong></p>
+            <ul class="clean">
+              <li>Comando <code>unlock</code>/<code>lock</code>/<code>ping</code></li>
+              <li>ACK com latência medida em ms</li>
+              <li>Timeout de 8 s e registro de falha</li>
+              <li>PIN de 6 dígitos + QR Code com expiração</li>
+              <li>Re-tranca automática no firmware</li>
+            </ul>
+          </div>
+          <div>
+            <p class="sub" style="margin-bottom:.4rem"><strong>Tempo real</strong></p>
+            <ul class="clean">
+              <li>WebSocket <code>/ws</code> com snapshot inicial</li>
+              <li>Eventos: telemetria, porta, status, comando, ACK</li>
+              <li>Log operacional ao vivo no navegador</li>
+              <li>Detecção de módulo offline em 60 s</li>
+            </ul>
+          </div>
+          <div>
+            <p class="sub" style="margin-bottom:.4rem"><strong>Operação</strong></p>
+            <ul class="clean">
+              <li>Locais com coordenadas (PostGIS)</li>
+              <li>Estados: disponível, ocupada, higienização, manutenção</li>
+              <li>Dashboard com KPIs e histórico de eventos</li>
+              <li>Simulador de firmware para demonstração</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 2. PAINEL AO VIVO ───────────────────────────────────────────── -->
+  <section id="tab-live" class="tab-content">
+    <h2>Painel operacional em tempo real</h2>
+    <p class="sub">Os dados chegam pelo WebSocket. Nenhum polling: quando a porta de um módulo abre, o evento aparece aqui no instante.</p>
+
+    <div class="stack">
+      <div class="card">
+        <div class="units-grid" id="unitsGrid">
+          <p class="sub">Carregando unidades…</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Tranca da unidade <span id="selCode" style="color:var(--brand)"></span></h3>
+          <p class="sub" id="selLoc">Selecione um módulo acima.</p>
+
+          <div class="door-panel">
+            <div class="door-state">
+              <div class="icon" id="doorIcon">🚪</div>
+              <div class="lbl">Porta</div>
+              <div class="val" id="doorVal">—</div>
+            </div>
+            <div class="door-state">
+              <div class="icon" id="lockIcon">🔒</div>
+              <div class="lbl">Tranca</div>
+              <div class="val" id="lockVal">—</div>
+            </div>
+            <div class="door-state">
+              <div class="icon">⚡</div>
+              <div class="lbl">Último ACK</div>
+              <div class="val" id="ackVal">—</div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btnUnlock">Destravar agora</button>
+            <button class="btn btn-ghost" id="btnLock">Travar</button>
+            <button class="btn btn-ghost" id="btnPing">Ping (latência)</button>
+          </div>
+          <p class="sub" style="margin:0.85rem 0 0" id="cmdFeedback"></p>
+        </div>
+
+        <div class="card">
+          <h3>Eventos recebidos (tempo real)</h3>
+          <p class="sub">Fluxo cru do broker MQTT chegando na API e no navegador.</p>
+          <div class="log" id="eventLog"><span class="t">aguardando eventos…</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Histórico de eventos de porta</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Quando</th><th>Unidade</th><th>Evento</th><th>Origem</th></tr></thead>
+            <tbody id="eventsBody"><tr><td colspan="4" class="sub">sem eventos ainda</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 3. RESERVA ─────────────────────────────────────────────────── -->
+  <section id="tab-booking" class="tab-content">
+    <h2>Reserva, pagamento e liberação</h2>
+    <p class="sub">Fluxo completo: escolha do ponto, período, Pix e código de acesso. A validação do código dispara o comando real de destrave.</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>1. Nova reserva</h3>
+        <div style="display:grid;gap:.75rem;margin-top:.85rem">
+          <label class="sub" style="margin:0">Unidade
+            <select id="bkUnit" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;margin-top:.25rem"></select>
+          </label>
+          <label class="sub" style="margin:0">Período
+            <select id="bkHours" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;margin-top:.25rem">
+              <option value="1">1 hora — R$ 35,00</option>
+              <option value="2" selected>2 horas — R$ 60,00</option>
+              <option value="4">4 horas — R$ 100,00</option>
+              <option value="8">8 horas — R$ 180,00</option>
+            </select>
+          </label>
+          <label class="sub" style="margin:0">Nome do hóspede
+            <input id="bkName" placeholder="opcional" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;margin-top:.25rem">
+          </label>
+          <button class="btn btn-primary" id="btnBook">Gerar Pix e código de acesso</button>
+        </div>
+        <div id="bkResult" style="margin-top:1rem"></div>
+      </div>
+
+      <div class="card">
+        <h3>2. Validar acesso e destravar</h3>
+        <p class="sub">Simula a leitura do QR Code na porta do módulo.</p>
+        <div style="display:grid;gap:.75rem">
+          <label class="sub" style="margin:0">PIN de 6 dígitos
+            <input id="acPin" maxlength="6" placeholder="000000" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:ui-monospace,monospace;letter-spacing:3px;margin-top:.25rem">
+          </label>
+          <button class="btn btn-primary" id="btnValidate">Validar e destravar</button>
+        </div>
+        <div id="acResult" style="margin-top:1rem"></div>
+        <div class="note info" style="margin-top:1rem">
+          Toda validação bem-sucedida publica um comando MQTT real e aguarda o ACK do firmware.
+          O resultado aparece no painel ao vivo imediatamente.
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.1rem">
+      <h3>Integração do pagamento</h3>
+      <p class="sub">Nesta versão o Pix é <strong>simulado</strong> (TXID gerado, reserva marcada como paga) para não exigir credenciais bancárias na avaliação.</p>
+      <ul class="clean">
+        <li><strong>Trocar por PSP real</strong> — implemente <code>POST /api/bookings</code> chamando o provedor (Efí, Mercado Pago, Asaas): crie a cobrança, guarde o <code>txid</code> e confirme o pagamento via webhook antes de liberar o código.</li>
+        <li><strong>Idempotência</strong> — <code>bookings.pix_txid</code> é único por cobrança; o webhook atualiza o status, nunca duplica a reserva.</li>
+        <li><strong>Liberação só após pagamento</strong> — o código de acesso é criado com <code>expira_em</code> e consumido uma única vez (<code>usado = TRUE</code>).</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── 4. FIRMWARE ────────────────────────────────────────────────── -->
+  <section id="tab-firmware" class="tab-content">
+    <h2>Firmware MicroPython — pronto para copiar</h2>
+    <p class="sub">
+      Código que roda no ESP32 do módulo. Copie direto daqui ou baixe o arquivo.
+      São três arquivos: <code>main.py</code> (lógica), <code>boot.py</code> (inicialização) e
+      <code>config.example.json</code> (parâmetros da unidade).
+    </p>
+
+    <div class="note" style="margin-bottom:1.1rem">
+      O firmware conversa com o mesmo broker da API. Ao receber <code>unlock</code>, aciona o relé,
+      publica <em>destravada</em> e responde o ACK — é o que o painel mostra como confirmação em tempo real.
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h3>main.py — lógica do módulo</h3>
+        <p class="sub">Telemetria periódica, eventos de porta por sensor magnético, comando de tranca com ACK, re-tranca automática e reconexão.</p>
+        <div class="code-block">
+          <div class="code-head">
+            <span>firmware/main.py</span>
+            <span class="actions">
+              <button class="copy-btn" data-copy="fwMain">Copiar</button>
+              <button class="dl-btn" data-dl="/firmware/main.py" data-name="main.py">Baixar</button>
+            </span>
+          </div>
+          <pre><code id="fwMain">Carregando firmware/main.py…</code></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>boot.py — inicialização</h3>
+        <div class="code-block">
+          <div class="code-head">
+            <span>firmware/boot.py</span>
+            <span class="actions">
+              <button class="copy-btn" data-copy="fwBoot">Copiar</button>
+              <button class="dl-btn" data-dl="/firmware/boot.py" data-name="boot.py">Baixar</button>
+            </span>
+          </div>
+          <pre><code id="fwBoot">Carregando firmware/boot.py…</code></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>config.json — parâmetros da unidade</h3>
+        <p class="sub">Ajuste <code>unit_code</code>, Wi-Fi, broker e os pinos do seu hardware. Este arquivo é um modelo: renomeie para <code>config.json</code> no dispositivo.</p>
+        <div class="code-block">
+          <div class="code-head">
+            <span>firmware/config.example.json</span>
+            <span class="actions">
+              <button class="copy-btn" data-copy="fwCfg">Copiar</button>
+              <button class="dl-btn" data-dl="/firmware/config.example.json" data-name="config.json">Baixar</button>
+            </span>
+          </div>
+          <pre><code id="fwCfg">Carregando config.example.json…</code></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Gravar no ESP32</h3>
+        <p class="sub">Com <code>mpremote</code> instalado (<code>pip install mpremote</code>):</p>
+        <div class="code-block">
+          <div class="code-head">
+            <span>terminal</span>
+            <span class="actions"><button class="copy-btn" data-copy="fwFlash">Copiar</button></span>
+          </div>
+          <pre><code id="fwFlash">mpremote connect /dev/ttyUSB0 mip install umqtt.simple
+mpremote connect /dev/ttyUSB0 fs cp firmware/main.py :main.py
+mpremote connect /dev/ttyUSB0 fs cp firmware/boot.py :boot.py
+mpremote connect /dev/ttyUSB0 fs cp firmware/config.example.json :config.json
+mpremote connect /dev/ttyUSB0 reset</code></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Sem hardware? Use o simulador</h3>
+        <p class="sub">O simulador em Node.js emula os módulos falando MQTT exatamente como o firmware — telemetria, eventos de porta e ACK com latência realista.</p>
+        <div class="code-block">
+          <div class="code-head">
+            <span>terminal</span>
+            <span class="actions"><button class="copy-btn" data-copy="fwSim">Copiar</button></span>
+          </div>
+          <pre><code id="fwSim">cd backend && npm install
+MQTT_URL=mqtt://127.0.0.1:1883 DOOR_FLAP=1 npm run sim</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 5. ARQUITETURA & API ───────────────────────────────────────── -->
+  <section id="tab-arch" class="tab-content">
+    <h2>Arquitetura &amp; contrato da API</h2>
+    <p class="sub">Fluxo completo de um destrave, do toque no navegador até a confirmação.</p>
+
+    <div class="card">
+      <div class="arch-flow">
+        <div class="arch-node"><div class="t">Navegador</div><div class="d">PWA do painel</div></div>
+        <div class="arch-node"><div class="t">API Fastify</div><div class="d">REST + WebSocket</div></div>
+        <div class="arch-node"><div class="t">PostgreSQL + PostGIS</div><div class="d">Unidades, reservas, eventos</div></div>
+        <div class="arch-node"><div class="t">Mosquitto</div><div class="d">Broker MQTT</div></div>
+        <div class="arch-node"><div class="t">ESP32 + MicroPython</div><div class="d">Relé, reed switch, DHT22</div></div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:1.1rem">
+      <div class="card">
+        <h3>Tópicos MQTT</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tópico</th><th>Direção</th><th>Conteúdo</th></tr></thead>
+            <tbody>
+              <tr><td><code>siestabox/&lt;unidade&gt;/telemetry</code></td><td>firmware → API</td><td>temperatura, umidade, bateria, RSSI, uptime</td></tr>
+              <tr><td><code>siestabox/&lt;unidade&gt;/door</code></td><td>firmware → API</td><td>aberta, fechada, destravada, travada</td></tr>
+              <tr><td><code>siestabox/&lt;unidade&gt;/status</code></td><td>firmware → API</td><td>online (retained, com LWT offline)</td></tr>
+              <tr><td><code>siestabox/&lt;unidade&gt;/cmd</code></td><td>API → firmware</td><td>unlock, lock, ping, ar_set</td></tr>
+              <tr><td><code>siestabox/&lt;unidade&gt;/ack</code></td><td>firmware → API</td><td>command_id, ok, estado atual</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Endpoints REST</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Método</th><th>Rota</th><th>Uso</th></tr></thead>
+            <tbody>
+              <tr><td>GET</td><td><code>/api/health</code></td><td>Status, banco, MQTT, clientes WS</td></tr>
+              <tr><td>GET</td><td><code>/api/locations</code></td><td>Pontos com coordenadas e disponibilidade</td></tr>
+              <tr><td>GET</td><td><code>/api/units</code></td><td>Lista de módulos (filtros: location_id, status)</td></tr>
+              <tr><td>GET</td><td><code>/api/units/:codigo</code></td><td>Detalhe do módulo</td></tr>
+              <tr><td>POST</td><td><code>/api/units/:codigo/door/:action</code></td><td><code>unlock</code>, <code>lock</code>, <code>ping</code> — aguarda ACK</td></tr>
+              <tr><td>GET</td><td><code>/api/units/:codigo/events</code></td><td>Últimos 50 eventos de porta</td></tr>
+              <tr><td>GET</td><td><code>/api/units/:codigo/telemetry</code></td><td>Últimas 100 leituras</td></tr>
+              <tr><td>POST</td><td><code>/api/bookings</code></td><td>Cria reserva, Pix simulado e código de acesso</td></tr>
+              <tr><td>POST</td><td><code>/api/access/validate</code></td><td>Valida PIN/QR e destrava o módulo</td></tr>
+              <tr><td>GET</td><td><code>/api/dashboard</code></td><td>KPIs, latências, eventos, receita</td></tr>
+              <tr><td>WS</td><td><code>/ws</code></td><td>telemetry, door, status, command, ack</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.1rem">
+      <h3>Exemplo — destravar e receber confirmação</h3>
+      <div class="code-block">
+        <div class="code-head">
+          <span>terminal</span>
+          <span class="actions"><button class="copy-btn" data-copy="apiExample">Copiar</button></span>
+        </div>
+        <pre><code id="apiExample"># Comando de destrave aguardando o ACK do firmware
+curl -X POST http://localhost:8080/api/units/SB-REC-01/door/unlock
+
+# {
+#   "command_id": "8f2c…",
+#   "unit": "SB-REC-01",
+#   "action": "unlock",
+#   "confirmed": true,
+#   "latency_ms": 148
+# }
+
+# Escutar o fluxo em tempo real
+websocat ws://localhost:8080/ws</code></pre>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.1rem">
+      <h3>Modelo de dados</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tabela</th><th>Papel</th></tr></thead>
+          <tbody>
+            <tr><td><code>locations</code></td><td>Pontos de operação com <code>GEOGRAPHY(Point,4326)</code> e índice GIST</td></tr>
+            <tr><td><code>units</code></td><td>Módulos: status, tranca, porta, bateria, temperatura, última comunicação</td></tr>
+            <tr><td><code>bookings</code></td><td>Reservas com horas, valor, método e TXID Pix</td></tr>
+            <tr><td><code>access_codes</code></td><td>PIN e payload de QR, com expiração e uso único</td></tr>
+            <tr><td><code>commands</code></td><td>Comandos enviados, status e latência de confirmação</td></tr>
+            <tr><td><code>door_events</code></td><td>Histórico de abertura, fechamento, destrave e trava</td></tr>
+            <tr><td><code>telemetry</code></td><td>Série temporal de sensores para manutenção preditiva</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 6. COMO RODAR ──────────────────────────────────────────────── -->
+  <section id="tab-run" class="tab-content">
+    <h2>Como rodar</h2>
+    <p class="sub">Três caminhos: stack completa com Docker, desenvolvimento local da API, e firmware no hardware real.</p>
+
+    <div class="stack">
+      <div class="card">
+        <h3>A. Stack completa (recomendado)</h3>
+        <div class="code-block">
+          <div class="code-head">
+            <span>terminal</span>
+            <span class="actions"><button class="copy-btn" data-copy="runA">Copiar</button></span>
+          </div>
+          <pre><code id="runA">git clone https://github.com/KeyCoreSH/siestabox.git
+cd siestabox
+cp .env.example .env
+docker compose up -d --build
+
+# Sobe: db (PostGIS), mqtt (Mosquitto), api (Fastify), web (nginx)
+# Painel:  http://localhost:8131
+# API:     http://localhost:8080/api/health
+
+# Simular os módulos ESP32 falando MQTT:
+docker compose --profile sim up -d simulator</code></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>B. Desenvolvimento local da API</h3>
+        <div class="code-block">
+          <div class="code-head">
+            <span>terminal</span>
+            <span class="actions"><button class="copy-btn" data-copy="runB">Copiar</button></span>
+          </div>
+          <pre><code id="runB">cd backend
+cp ../.env.example ../.env
+npm install
+
+# Requer Postgres/PostGIS e Mosquitto acessíveis
+export DATABASE_URL="postgresql://keycore_admin:senha@localhost:5432/siestabox_db"
+export MQTT_URL="mqtt://localhost:1883"
+
+npm run build && npm start     # produção
+npm run dev                    # watch mode
+npm run sim                    # simulador de firmware</code></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>C. Firmware no ESP32</h3>
+        <div class="code-block">
+          <div class="code-head">
+            <span>terminal</span>
+            <span class="actions"><button class="copy-btn" data-copy="runC">Copiar</button></span>
+          </div>
+          <pre><code id="runC"># 1. Grave o MicroPython no ESP32 (esptool)
+esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 ESP32_GENERIC-*.bin
+
+# 2. Instale o cliente MQTT e copie os arquivos
+pip install mpremote esptool
+mpremote connect /dev/ttyUSB0 mip install umqtt.simple
+mpremote connect /dev/ttyUSB0 fs cp firmware/main.py :main.py
+mpremote connect /dev/ttyUSB0 fs cp firmware/boot.py :boot.py
+mpremote connect /dev/ttyUSB0 fs cp firmware/config.example.json :config.json
+
+# 3. Edite o config.json com Wi-Fi, IP do broker e unit_code
+# 4. Reinicie
+mpremote connect /dev/ttyUSB0 reset</code></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Ligações do hardware de referência</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Componente</th><th>GPIO</th><th>Observação</th></tr></thead>
+            <tbody>
+              <tr><td>Relé da tranca</td><td>26</td><td>Módulo de relé ativo em nível baixo</td></tr>
+              <tr><td>Sensor magnético (reed)</td><td>27</td><td>PULL_UP interno; fecha no GND quando a porta fecha</td></tr>
+              <tr><td>DHT22 (temperatura/umidade)</td><td>4</td><td>Opcional — sem ele o firmware usa leitura simulada</td></tr>
+              <tr><td>ADC da bateria</td><td>34</td><td>Divisor de tensão calibrado para 10,5–12,6 V</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="note">
+        Segurança em produção: habilite autenticação no Mosquitto (<code>allow_anonymous false</code> + <code>password_file</code>),
+        troque as credenciais do Postgres no <code>.env</code>, coloque MQTT sobre TLS e proteja a API com autenticação
+        antes de expor a internet.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>
+    © 2026 <a href="https://keycore.com.br" target="_blank" rel="noopener">KeyCore Tech Hub</a> (CNPJ 42.231.277/0001-75) —
+    Parceira de Transformação Operacional.<br>
+    Tecnologia que devolve tempo. · <a href="https://github.com/KeyCoreSH/siestabox" target="_blank" rel="noopener">Repositório no GitHub</a>
+  </p>
+</footer>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

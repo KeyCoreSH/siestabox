@@ -1,0 +1,99 @@
+# =============================================================================
+#  Siesta Box Platform — stack completa (PostgreSQL/PostGIS + MQTT + API + Web)
+#
+#  Suba tudo:           docker compose up -d --build
+#  Só o ambiente dev:   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#  Simulador de firmware: docker compose --profile sim up -d simulator
+# =============================================================================
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: siesta-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-siestabox_db}
+      POSTGRES_USER: ${POSTGRES_USER:-keycore_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-keycore_secure_pass_2026}
+    volumes:
+      - siesta-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-keycore_admin} -d ${POSTGRES_DB:-siestabox_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [siesta]
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: siesta-mqtt
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - siesta-mosquitto-data:/mosquitto/data
+    ports:
+      - "${MQTT_HOST_PORT:-1883}:1883"    # ESP32 real conecta aqui
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -t '$$SYS/#' -C 1 -W 3 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+    restart: unless-stopped
+    networks: [siesta]
+
+  api:
+    build: ./backend
+    container_name: siesta-api
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgresql://${POSTGRES_USER:-keycore_admin}:${POSTGRES_PASSWORD:-keycore_secure_pass_2026}@db:5432/${POSTGRES_DB:-siestabox_db}
+      MQTT_URL: mqtt://mqtt:1883
+      MQTT_PREFIX: ${MQTT_PREFIX:-siestabox}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${API_HOST_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+    restart: unless-stopped
+    networks: [siesta]
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: siesta-web
+    environment:
+      SIESTA_API_BASE: ${SIESTA_API_BASE:-}
+    ports:
+      - "${WEB_HOST_PORT:-8131}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks: [siesta]
+
+  # Perfil opcional: emula os módulos ESP32 falando MQTT (útil para demo).
+  simulator:
+    build: ./backend
+    container_name: siesta-simulator
+    profiles: [sim]
+    command: ["node", "tools/device-simulator.mjs"]
+    environment:
+      MQTT_URL: mqtt://mqtt:1883
+      MQTT_PREFIX: ${MQTT_PREFIX:-siestabox}
+      TELEMETRY_INTERVAL_S: ${TELEMETRY_INTERVAL_S:-10}
+      DOOR_FLAP: ${DOOR_FLAP:-1}
+    depends_on:
+      mqtt:
+        condition: service_started
+    restart: unless-stopped
+    networks: [siesta]
+
+volumes:
+  siesta-pgdata:
+  siesta-mosquitto-data:
+
+networks:
+  siesta:
+    driver: bridge

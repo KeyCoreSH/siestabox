@@ -1,0 +1,3 @@
+# Dependências MicroPython (copie para o dispositivo com mip ou mpremote)
+#   mpremote mip install umqtt.simple
+umqtt.simple

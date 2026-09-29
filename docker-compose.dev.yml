@@ -1,0 +1,18 @@
+# ── Overrides para desenvolvimento local (bancada) ────────────────────────
+# Uso: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+services:
+  db:
+    ports:
+      - "${DB_HOST_PORT:-55433}:5432"   # 5432 livre fica para o Postgres do host
+
+  api:
+    environment:
+      LOG_LEVEL: debug
+
+volumes:
+  siesta-pgdata:
+  siesta-mosquitto-data:
+
+networks:
+  siesta:
+    driver: bridge

@@ -1,0 +1,24 @@
+{
+  "unit_code": "SB-REC-01",
+  "wifi_ssid": "SIESTA-BOX-IOT",
+  "wifi_password": "troque-esta-senha",
+  "mqtt_host": "192.168.0.10",
+  "mqtt_port": 1883,
+  "mqtt_user": "siesta",
+  "mqtt_password": "troque-esta-senha",
+  "mqtt_prefix": "siestabox",
+  "mqtt_use_tls": false,
+  "firmware_version": "1.0.0",
+  "telemetry_interval_s": 10,
+  "door_debounce_ms": 400,
+  "pins": {
+    "relay_lock": 26,
+    "door_reed": 27,
+    "dht22": 4,
+    "battery_adc": 34
+  },
+  "battery_calibration": {
+    "adc_max": 4095,
+    "volts_max": 14.0
+  }
+}
