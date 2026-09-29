@@ -3,6 +3,7 @@ FROM nginx:1.27-alpine
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY frontend/index.html /usr/share/nginx/html/index.html
+COPY frontend/proposta.html /usr/share/nginx/html/proposta.html
 COPY frontend/assets/ /usr/share/nginx/html/assets/
 
 # Firmware publicado como arquivo estático: o usuário lê, copia e baixa
